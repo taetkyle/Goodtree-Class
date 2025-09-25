@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>한글학교 점수판</title>
+    <style>
+        /* CSS 스타일 */
+        body {
+            font-family: 'Arial', sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            background-color: #f4f4f9;
+            padding: 20px;
+        }
+
+        h1 {
+            color: #333;
+            margin-bottom: 30px;
+        }
+
+        #input-area {
+            margin-bottom: 20px;
+            padding: 15px;
+            border: 1px solid #ccc;
+            border-radius: 8px;
+            background-color: #fff;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            align-items: center;
+        }
+        
+        #player-input-group {
+            display: flex;
+            align-items: center;
+        }
+
+        #player-input-group input[type="text"] {
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            width: 200px;
+            margin-right: 10px;
+        }
+
+        #player-input-group button {
+            padding: 10px 15px;
+            border: none;
+            border-radius: 4px;
+            background-color: #007bff;
+            color: white;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+
+        #player-input-group button:hover {
+            background-color: #0056b3;
+        }
+        
+        #file-io-group {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        #file-io-group button {
+            padding: 10px 15px;
+            border: none;
+            border-radius: 4px;
+            color: white;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+
+        #exportBtn {
+            background-color: #21a812;
+        }
+
+        #exportBtn:hover {
+            background-color: #1a8b0e;
+        }
+
+        #importBtn {
+            background-color: #ff9800;
+        }
+
+        #importBtn:hover {
+            background-color: #e68900;
+        }
+
+        #score-board {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+            justify-content: center;
+            max-width: 1000px; /* 한 줄에 6명이 들어가도록 수정 */
+        }
+
+        .player-card {
+            background-color: #fff;
+            border: 1px solid #ddd;
+            border-radius: 10px;
+            padding: 20px;
+            text-align: center;
+            width: 130px; /* 카드 너비를 줄여 6명이 들어가도록 수정 */
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+            transition: transform 0.2s;
+        }
+
+        .player-card:hover {
+            transform: translateY(-5px);
+        }
+
+        .player-card h2 {
+            margin-top: 0;
+            color: #007bff;
+            font-size: 1.5em;
+        }
+
+        .player-card p {
+            font-size: 2.5em;
+            font-weight: bold;
+            color: #333;
+            margin: 10px 0;
+        }
+        
+        .button-group {
+            display: flex;
+            justify-content: space-around;
+            gap: 5px;
+            margin-top: 10px;
+        }
+
+        .player-card button {
+            color: white;
+            border: none;
+            padding: 8px 12px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 0.9em;
+            transition: background-color 0.3s;
+            flex-grow: 1;
+        }
+
+        .player-card button.increase {
+            background-color: #28a745;
+        }
+
+        .player-card button.increase:hover {
+            background-color: #1e7e34;
+        }
+
+        .player-card button.decrease {
+            background-color: #dc3545;
+        }
+
+        .player-card button.decrease:hover {
+            background-color: #c82333;
+        }
+    </style>
+</head>
+<body>
+    <h1>한글학교 점수판</h1>
+
+    <div id="input-area">
+        <div id="player-input-group">
+            <input type="text" id="playerNameInput" placeholder="이름을 입력하세요">
+            <button onclick="addPlayer()">선수 추가</button>
+        </div>
+        <div id="file-io-group">
+            <!-- 파일 선택창은 숨겨놓고 버튼으로 대신 클릭합니다 -->
+            <input type="file" id="importFile" style="display:none;" accept=".csv" onchange="importCSV()">
+            <button id="importBtn" onclick="document.getElementById('importFile').click()">CSV 가져오기</button>
+            <button id="exportBtn" onclick="exportCSV()">CSV 내보내기</button>
+        </div>
+    </div>
+
+    <div id="score-board">
+    </div>
+
+    <script>
+        // JavaScript 로직
+
+        // 선수 점수를 저장할 객체
+        let scores = {};
+
+        // 1. 선수 추가 기능
+        function addPlayer() {
+            const input = document.getElementById('playerNameInput');
+            let name = input.value.trim();
+
+            if (name === "") {
+                alert("이름을 입력해주세요!");
+                return;
+            }
+
+            if (scores[name] !== undefined) {
+                alert(`${name} 님은 이미 추가되었습니다.`);
+                return;
+            }
+
+            scores[name] = 0;
+            displayPlayer(name, 0);
+            input.value = '';
+        }
+
+        // 2. 점수판에 선수 카드를 표시하는 기능
+        function displayPlayer(name, score) {
+            const board = document.getElementById('score-board');
+
+            const card = document.createElement('div');
+            card.className = 'player-card';
+            card.id = `card-${name}`;
+
+            card.innerHTML = `
+                <h2>${name}</h2>
+                <p id="score-${name}">${score}</p>
+                <div class="button-group">
+                    <button class="increase" onclick="increaseScore('${name}')">점수 올리기 (+1)</button>
+                    <button class="decrease" onclick="decreaseScore('${name}')">점수 내리기 (-1)</button>
+                </div>
+            `;
+         
+            board.appendChild(card);
+        }
+
+        // 3. 점수를 1점 올리는 기능
+        function increaseScore(name) {
+            scores[name]++;
+            const scoreElement = document.getElementById(`score-${name}`);
+            if (scoreElement) {
+                scoreElement.textContent = scores[name];
+            }
+        }
+   
+        // 4. 점수를 1점 내리는 기능
+        function decreaseScore(name) {
+            scores[name]--;
+            const scoreElement = document.getElementById(`score-${name}`);
+            if (scoreElement) {
+                scoreElement.textContent = scores[name];
+            }
+        }
+        
+        // 5. CSV 파일로 데이터를 내보내는 기능
+        function exportCSV() {
+            let csvContent = "이름,점수\n"; // CSV 헤더
+            for (const name in scores) {
+                csvContent += `${name},${scores[name]}\n`;
+            }
+
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement("a");
+            const url = URL.createObjectURL(blob);
+            link.setAttribute("href", url);
+            link.setAttribute("download", "점수판.csv");
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+
+        // 6. CSV 파일을 읽어와서 데이터를 가져오는 기능
+        function importCSV() {
+            const fileInput = document.getElementById('importFile');
+            const file = fileInput.files[0];
+
+            if (!file) {
+                return;
+            }
+
+            const reader = new FileReader();
+            reader.onload = function(event) {
+                const csvText = event.target.result;
+                const lines = csvText.split('\n');
+                
+                // 기존 데이터 초기화
+                scores = {};
+                const board = document.getElementById('score-board');
+                board.innerHTML = '';
+
+                // 첫 줄(헤더)을 건너뛰고 데이터 처리
+                for (let i = 1; i < lines.length; i++) {
+                    const line = lines[i].trim();
+                    if (line) {
+                        const [name, score] = line.split(',');
+                        scores[name] = parseInt(score, 10) || 0;
+                        displayPlayer(name, scores[name]);
+                    }
+                }
+            };
+
+            reader.readAsText(file);
+        }
+    </script>
+</body>
+</html>
